@@ -1333,7 +1333,10 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := tx.Exec("INSERT INTO transaction_evidences (seller_id, buyer_id, status, item_id, item_name, item_price, item_description,item_category_id,item_root_category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	var transactionEvidenceID int64
+	if err := tx.Get(
+		&transactionEvidenceID,
+		"INSERT INTO transaction_evidences (seller_id, buyer_id, status, item_id, item_name, item_price, item_description,item_category_id,item_root_category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
 		targetItem.SellerID,
 		buyer.ID,
 		TransactionEvidenceStatusWaitShipping,
@@ -1343,17 +1346,7 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		targetItem.Description,
 		category.ID,
 		category.ParentID,
-	)
-	if err != nil {
-		log.Print(err)
-
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		tx.Rollback()
-		return
-	}
-
-	transactionEvidenceID, err := result.LastInsertId()
-	if err != nil {
+	); err != nil {
 		log.Print(err)
 
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
@@ -1977,7 +1970,10 @@ func postSell(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := tx.Exec("INSERT INTO items (seller_id, status, name, price, description,image_name,category_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+	var itemID int64
+	if err := tx.Get(
+		&itemID,
+		"INSERT INTO items (seller_id, status, name, price, description,image_name,category_id) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
 		seller.ID,
 		ItemStatusOnSale,
 		name,
@@ -1985,16 +1981,7 @@ func postSell(w http.ResponseWriter, r *http.Request) {
 		description,
 		imgName,
 		category.ID,
-	)
-	if err != nil {
-		log.Print(err)
-
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
-	}
-
-	itemID, err := result.LastInsertId()
-	if err != nil {
+	); err != nil {
 		log.Print(err)
 
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
@@ -2243,21 +2230,14 @@ func postRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := dbx.Exec("INSERT INTO users (account_name, hashed_password, address) VALUES (?, ?, ?)",
+	var userID int64
+	if err := dbx.Get(
+		&userID,
+		"INSERT INTO users (account_name, hashed_password, address) VALUES (?, ?, ?) RETURNING id",
 		accountName,
 		hashedPassword,
 		address,
-	)
-	if err != nil {
-		log.Print(err)
-
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
-	}
-
-	userID, err := result.LastInsertId()
-
-	if err != nil {
+	); err != nil {
 		log.Print(err)
 
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
