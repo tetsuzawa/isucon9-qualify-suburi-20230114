@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v9"
@@ -274,6 +275,52 @@ type resSetting struct {
 	User              *User      `json:"user,omitempty"`
 	Categories        []Category `json:"categories"`
 }
+
+type cache[K comparable, V any] struct {
+	sync.RWMutex
+	items map[K]V
+}
+
+func NewCache[K comparable, V any]() *cache[K, V] {
+	m := make(map[K]V)
+	c := &cache[K, V]{
+		items: m,
+	}
+	return c
+}
+
+func (c *cache[K, V]) Set(key K, value V) {
+	c.Lock()
+	c.items[key] = value
+	c.Unlock()
+}
+
+func (c *cache[K, V]) Get(key K) (V, bool) {
+	c.RLock()
+	v, found := c.items[key]
+	c.RUnlock()
+	return v, found
+}
+
+func (c *cache[K, V]) Del(key K) {
+	c.Lock()
+	delete(c.items, key)
+	c.Unlock()
+}
+
+func (c *cache[K, V]) Keys() []K {
+	c.RLock()
+	res := make([]K, len(c.items))
+	i := 0
+	for k, _ := range c.items {
+		res[i] = k
+		i++
+	}
+	c.RUnlock()
+	return res
+}
+
+var ItemCache = NewCache[string, Item]()
 
 func init() {
 	store = sessions.NewCookieStore([]byte("abc"))
@@ -1174,15 +1221,22 @@ func getItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	item := Item{}
-	err = dbx.Get(&item, "SELECT * FROM items WHERE id = ?", itemID)
-	if err == sql.ErrNoRows {
-		outputErrorMsg(w, http.StatusNotFound, "item not found")
-		return
-	}
-	if err != nil {
-		log.Print(err)
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
+	// cache read
+	itemCacheKey := fmt.Sprintf("item_id:%d", itemID)
+	if it, ok := ItemCache.Get(itemCacheKey); ok {
+		item = it
+	} else {
+		err = dbx.Get(&item, "SELECT * FROM items WHERE id = ?", itemID)
+		if err == sql.ErrNoRows {
+			outputErrorMsg(w, http.StatusNotFound, "item not found")
+			return
+		}
+		if err != nil {
+			log.Print(err)
+			outputErrorMsg(w, http.StatusInternalServerError, "db error")
+			return
+		}
+		ItemCache.Set(itemCacheKey, item)
 	}
 
 	category, err := getCategoryByID(dbx, item.CategoryID)
@@ -1332,6 +1386,8 @@ func postItemEdit(w http.ResponseWriter, r *http.Request) {
 		tx.Rollback()
 		return
 	}
+	itemCacheKey := fmt.Sprintf("item_id:%d", itemID)
+	ItemCache.Del(itemCacheKey)
 
 	err = tx.Get(&targetItem, "SELECT * FROM items WHERE id = ?", itemID)
 	if err != nil {
@@ -1430,16 +1486,24 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var targetItem Item
-	err = dbx.Get(&targetItem, "SELECT * FROM items WHERE id = ?", rb.ItemID)
-	if err == sql.ErrNoRows {
-		outputErrorMsg(w, http.StatusNotFound, "item not found")
-		return
-	}
-	if err != nil {
-		log.Print(err)
+	// cache read
+	itemCacheKey := fmt.Sprintf("item_id:%d", rb.ItemID)
+	if it, ok := ItemCache.Get(itemCacheKey); ok {
+		targetItem = it
+	} else {
+		err = dbx.Get(&targetItem, "SELECT * FROM items WHERE id = ?", rb.ItemID)
+		ItemCache.Set(itemCacheKey, targetItem)
 
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
+		if err == sql.ErrNoRows {
+			outputErrorMsg(w, http.StatusNotFound, "item not found")
+			return
+		}
+		if err != nil {
+			log.Print(err)
+
+			outputErrorMsg(w, http.StatusInternalServerError, "db error")
+			return
+		}
 	}
 	if targetItem.Status != ItemStatusOnSale {
 		outputErrorMsg(w, http.StatusForbidden, "item is not for sale")
@@ -1537,6 +1601,9 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		time.Now(),
 		targetItem.ID,
 	)
+	itemCacheKey = fmt.Sprintf("item_id:%d", targetItem.ID)
+	ItemCache.Del(itemCacheKey)
+
 	if err != nil {
 		log.Print(err)
 
@@ -2027,6 +2094,8 @@ func postComplete(w http.ResponseWriter, r *http.Request) {
 		tx.Rollback()
 		return
 	}
+	itemCacheKey := fmt.Sprintf("item_id:%d", itemID)
+	ItemCache.Del(itemCacheKey)
 
 	tx.Commit()
 
@@ -2263,6 +2332,8 @@ func postBump(w http.ResponseWriter, r *http.Request) {
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
 		return
 	}
+	itemCacheKey := fmt.Sprintf("item_id:%d", targetItem.ID)
+	ItemCache.Del(itemCacheKey)
 
 	_, err = tx.Exec("UPDATE users SET last_bump=? WHERE id=?",
 		now,
