@@ -383,19 +383,25 @@ func getCSRFToken(r *http.Request) string {
 
 func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	session := getSession(r)
-	userID, ok := session.Values["user_id"]
+	userSess, ok := session.Values["user"]
+	//userID, ok := session.Values["user_id"]
 	if !ok {
 		return user, http.StatusNotFound, "no session"
 	}
 
-	err := dbx.Get(&user, "SELECT * FROM users WHERE id = ?", userID)
-	if err == sql.ErrNoRows {
-		return user, http.StatusNotFound, "user not found"
+	user, ok = userSess.(User)
+	if !ok {
+		return user, http.StatusInternalServerError, "type matigatteru yo!!!!"
 	}
-	if err != nil {
-		log.Print(err)
-		return user, http.StatusInternalServerError, "db error"
-	}
+
+	//err := dbx.Get(&user, "SELECT * FROM users WHERE id = ?", userID)
+	//if err == sql.ErrNoRows {
+	//	return user, http.StatusNotFound, "user not found"
+	//}
+	//if err != nil {
+	//	log.Print(err)
+	//	return user, http.StatusInternalServerError, "db error"
+	//}
 
 	return user, http.StatusOK, ""
 }
@@ -2354,6 +2360,7 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 	session := getSession(r)
 
 	session.Values["user_id"] = u.ID
+	session.Values["user"] = u
 	session.Values["csrf_token"] = secureRandomStr(20)
 	if err = session.Save(r, w); err != nil {
 		log.Print(err)
@@ -2424,6 +2431,7 @@ func postRegister(w http.ResponseWriter, r *http.Request) {
 
 	session := getSession(r)
 	session.Values["user_id"] = u.ID
+	session.Values["user"] = u
 	session.Values["csrf_token"] = secureRandomStr(20)
 	if err = session.Save(r, w); err != nil {
 		log.Print(err)
