@@ -26,10 +26,10 @@ EOF
 . ./env.sh
 
 # ====== go ======
-make -C private_isu/webapp/golang
+make -C isucari/webapp/go all
 mkdir -p /home/isucon/log/app
 sudo logrotate -f /home/isucon/etc/logrotate.d/app
-sudo systemctl restart isu-go.service
+sudo systemctl restart isucari.golang.service
 
 # ====== nginx ======
 mkdir -p /home/isucon/log/nginx
@@ -44,7 +44,7 @@ sudo systemctl restart nginx
 
 # ====== mysql ======
 sudo touch ${mysql_slow_log} ${mysql_error_log}
-sudo logrotate /home/isucon/etc/logrotate.d/mysql
+# sudo logrotate /home/isucon/etc/logrotate.d/mysql
 sudo chown mysql:mysql ${mysql_slow_log} ${mysql_error_log}
 sudo cp ${mysql_slow_log} ${mysql_slow_log}.prev
 sudo truncate -s 0 ${mysql_slow_log}
