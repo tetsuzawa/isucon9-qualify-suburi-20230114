@@ -63,6 +63,7 @@ const (
 	BcryptCost = 4
 
 	UserSimpleCacheKeyFmt = "userSimple,uid:%d"
+	LastBumpCacheKeyFmt   = "lastBump,uid:%d"
 )
 
 var (
@@ -1463,7 +1464,9 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	seller := User{}
-	err = tx.Get(&seller, "SELECT * FROM users WHERE id = ? FOR UPDATE", targetItem.SellerID)
+	// redis でbumpするのでfor updateはいらない
+	err = tx.Get(&seller, "SELECT * FROM users WHERE id = ?", targetItem.SellerID)
+	//err = tx.Get(&seller, "SELECT * FROM users WHERE id = ? FOR UPDATE", targetItem.SellerID)
 	if err == sql.ErrNoRows {
 		outputErrorMsg(w, http.StatusNotFound, "seller not found")
 		tx.Rollback()
@@ -2151,18 +2154,23 @@ func postSell(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
-	_, err = tx.Exec("UPDATE users SET num_sell_items=?, last_bump=? WHERE id=?",
-		seller.NumSellItems+1,
-		now,
-		seller.ID,
-	)
-	if err != nil {
-		log.Print(err)
+	// cache
+	key = fmt.Sprintf(LastBumpCacheKeyFmt, user.ID)
+	err = redisClient.Set(context.Background(), key, "1", BumpChargeSeconds).Err()
 
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
-	}
+	//now := time.Now()
+
+	//_, err = tx.Exec("UPDATE users SET num_sell_items=?, last_bump=? WHERE id=?",
+	//	seller.NumSellItems+1,
+	//	now,
+	//	seller.ID,
+	//)
+	//if err != nil {
+	//	log.Print(err)
+	//
+	//	outputErrorMsg(w, http.StatusInternalServerError, "db error")
+	//	return
+	//}
 	tx.Commit()
 
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
@@ -2222,7 +2230,9 @@ func postBump(w http.ResponseWriter, r *http.Request) {
 	}
 
 	seller := User{}
-	err = tx.Get(&seller, "SELECT * FROM users WHERE id = ? FOR UPDATE", user.ID)
+	// redis でbumpするのでfor updateはいらない
+	err = tx.Get(&seller, "SELECT * FROM users WHERE id = ?", user.ID)
+	//err = tx.Get(&seller, "SELECT * FROM users WHERE id = ? FOR UPDATE", user.ID)
 	if err == sql.ErrNoRows {
 		outputErrorMsg(w, http.StatusNotFound, "user not found")
 		tx.Rollback()
@@ -2237,7 +2247,23 @@ func postBump(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now()
 	// last_bump + 3s > now
-	if seller.LastBump.Add(BumpChargeSeconds).After(now) {
+	//
+	//if seller.LastBump.Add(BumpChargeSeconds).After(now) {
+	//	outputErrorMsg(w, http.StatusForbidden, "Bump not allowed")
+	//	tx.Rollback()
+	//	return
+	//}
+
+	key := fmt.Sprintf(LastBumpCacheKeyFmt, user.ID)
+	s, err := redisClient.Get(context.Background(), key).Result()
+	if err == redis.Nil {
+		// do nothing
+	} else if err != nil {
+		log.Print(err)
+		outputErrorMsg(w, http.StatusInternalServerError, "redis error")
+		tx.Rollback()
+		return
+	} else if s != "" {
 		outputErrorMsg(w, http.StatusForbidden, "Bump not allowed")
 		tx.Rollback()
 		return
@@ -2254,10 +2280,17 @@ func postBump(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = tx.Exec("UPDATE users SET last_bump=? WHERE id=?",
-		now,
-		seller.ID,
-	)
+	// db 挿入やめてredisに挿入する
+	//_, err = tx.Exec("UPDATE users SET last_bump=? WHERE id=?",
+	//	now,
+	//	seller.ID,
+	//)
+	//if err != nil {
+	//	log.Print(err)
+	//	outputErrorMsg(w, http.StatusInternalServerError, "db error")
+	//	return
+	//}
+	err = redisClient.Set(context.Background(), key, "1", BumpChargeSeconds).Err()
 	if err != nil {
 		log.Print(err)
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
