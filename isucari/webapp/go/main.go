@@ -10,7 +10,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -683,7 +682,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	if itemID > 0 && createdAt > 0 {
 		// paging
 		err := dbx.Select(&items,
-			"SELECT * FROM items WHERE status IN (?,?) AND (created_at < ?  OR (created_at <= ? AND id < ?)) ORDER BY status ASC, created_at DESC, id DESC LIMIT ?",
+			"SELECT * FROM items WHERE status IN (?,?) AND (created_at < ?  OR (created_at <= ? AND id < ?)) ORDER BY price DESC, status ASC, created_at DESC, id DESC LIMIT ?",
 			ItemStatusOnSale,
 			ItemStatusSoldOut,
 			time.Unix(createdAt, 0),
@@ -699,7 +698,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// 1st page
 		err := dbx.Select(&items,
-			"SELECT * FROM items WHERE status IN (?,?) ORDER BY status ASC, created_at DESC, id DESC LIMIT ?",
+			"SELECT * FROM items WHERE status IN (?,?) ORDER BY price DESC, status ASC, created_at DESC, id DESC LIMIT ?",
 			ItemStatusOnSale,
 			ItemStatusSoldOut,
 			ItemsPerPage+1,
@@ -741,14 +740,6 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	if len(itemSimples) > ItemsPerPage {
 		hasNext = true
 		itemSimples = itemSimples[0:ItemsPerPage]
-	}
-
-	if len(itemSimples) > 2 {
-		left, right := itemSimples[:len(itemSimples)/2], itemSimples[len(itemSimples)/2:]
-		rand.Shuffle(len(left), func(i, j int) {
-			left[i], left[j] = left[j], left[i]
-		})
-		itemSimples = append(left, right...)
 	}
 
 	rni := resNewItems{
