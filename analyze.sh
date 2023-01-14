@@ -22,7 +22,7 @@ mkdir -p ${result_dir}
 # alp
 # ALPM="/int/\d+,/uuid/[A-Za-z0-9_]+,/6digits/[a-z0-9]{6}"
 #ALPM="/@.+,/posts/\d+,/image/\d+.(jpg|png|gif),/posts?max_created_at.*$"
-ALPM="/new_items/\d+\.json,/users/\d+\.json,/items/\d+\.json,/transactions/\d+\.png,/categories/\d+/items,/items/\d+,/items/\d+/edit,/items/\d+/buy,/transactions/\d+,/users/\d+"
+ALPM="/new_items/\d+\.json,/users/\d+\.json,/items/\d+\.json,/transactions/\d+\.png,/categories/\d+/items,/items/\d+,/items/\d+/edit,/items/\d+/buy,/transactions/\d+,/users/\d+,/upload/[0-9a-zA-Z]+.jpg"
 OUTFORMT=count,1xx,2xx,3xx,4xx,5xx,method,uri,min,max,sum,avg,p95,min_body,max_body,avg_body
 touch ${result_dir}/alp.md
 cp ${result_dir}/alp.md ${result_dir}/alp.md.prev
