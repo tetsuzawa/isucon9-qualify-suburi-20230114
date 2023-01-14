@@ -15,9 +15,9 @@ import (
 	"strconv"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/mackee/pgx-replaced"
 	goji "goji.io"
 	"goji.io/pat"
 	"golang.org/x/crypto/bcrypt"
@@ -303,17 +303,9 @@ func main() {
 	if password == "" {
 		password = "isucari"
 	}
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%v/%v", user, password, host, port, dbname)
 
-	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
-		user,
-		password,
-		host,
-		port,
-		dbname,
-	)
-
-	dbx, err = sqlx.Open("mysql", dsn)
+	dbx, err = sqlx.Open("pgx-replaced", dsn)
 	if err != nil {
 		log.Fatalf("failed to connect to DB: %s.", err.Error())
 	}
