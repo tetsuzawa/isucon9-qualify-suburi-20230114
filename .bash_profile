@@ -1,5 +1,5 @@
 # BEGIN ANSIBLE MANAGED BLOCK go
-export PATH=/home/isucon/local/go/bin:/home/isucon/go/bin:$PATH
+#export PATH=/home/isucon/local/go/bin:/home/isucon/go/bin:$PATH
 #export GOROOT=/home/isucon/local/go
 # END ANSIBLE MANAGED BLOCK go
 # BEGIN ANSIBLE MANAGED BLOCK perl
