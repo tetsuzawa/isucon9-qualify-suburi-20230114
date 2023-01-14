@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	crand "crypto/rand"
 	"database/sql"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-redis/redis/v9"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
@@ -58,12 +60,15 @@ const (
 	TransactionsPerPage = 10
 
 	BcryptCost = 10
+
+	UserSimpleCacheKeyFmt = "userSimple,uid:%d"
 )
 
 var (
-	templates *template.Template
-	dbx       *sqlx.DB
-	store     sessions.Store
+	templates   *template.Template
+	dbx         *sqlx.DB
+	store       sessions.Store
+	redisClient *redis.Client
 )
 
 type Config struct {
@@ -320,6 +325,13 @@ func main() {
 	}
 	defer dbx.Close()
 
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	defer redisClient.Close()
+
 	mux := goji.NewMux()
 
 	// pprof
@@ -403,16 +415,59 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	return user, http.StatusOK, ""
 }
 
-func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
-	user := User{}
-	err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
+var UserSimpleCache = map[int64]UserSimple{}
+
+func initializeSimpleUserCache(db *sqlx.DB) error {
+	var users []User
+	err := db.Select(&users, "SELECT  * FROM `users`")
 	if err != nil {
+		return err
+	}
+	for _, u := range users {
+		UserSimpleCache[u.ID] = UserSimple{
+			ID:           u.ID,
+			AccountName:  u.AccountName,
+			NumSellItems: u.NumSellItems,
+		}
+
+		// numsell item set to redis
+		key := fmt.Sprintf(UserSimpleCacheKeyFmt, u.ID)
+		err = redisClient.Set(context.Background(), key, u.NumSellItems, 0).Err()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
+	if us, ok := UserSimpleCache[userID]; ok {
+		numsellStr, err := redisClient.Set(context.Background(), fmt.Sprintf(UserSimpleCacheKeyFmt, userID), userSimple.NumSellItems, 0).Result()
+		numsell, err := strconv.Atoi(numsellStr)
+		if err != nil {
+			return us, err
+		}
+		us.NumSellItems = numsell
+		return us, err
+	} else {
+		user := User{}
+		err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
+		if err != nil {
+			return userSimple, err
+		}
+		userSimple.ID = user.ID
+		userSimple.AccountName = user.AccountName
+		userSimple.NumSellItems = user.NumSellItems
+
+		// numsell item set to redis
+		err = redisClient.Set(context.Background(), fmt.Sprintf(UserSimpleCacheKeyFmt, userID), userSimple.NumSellItems, 0).Err()
+		if err != nil {
+			return userSimple, err
+		}
+
+		UserSimpleCache[userID] = userSimple
 		return userSimple, err
 	}
-	userSimple.ID = user.ID
-	userSimple.AccountName = user.AccountName
-	userSimple.NumSellItems = user.NumSellItems
-	return userSimple, err
 }
 
 func getCategoryByID(q sqlx.Queryer, categoryID int) (category Category, err error) {
@@ -497,6 +552,13 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
 		return
+	}
+
+	// cache
+	err = initializeSimpleUserCache(dbx)
+	if err != nil {
+		log.Print(err)
+		outputErrorMsg(w, http.StatusInternalServerError, "cache initialize error")
 	}
 
 	res := resInitialize{
@@ -2012,6 +2074,16 @@ func postSell(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+		return
+	}
+
+	// cache
+	key := fmt.Sprintf(UserSimpleCacheKeyFmt, user.ID)
+	err = redisClient.Incr(context.Background(), key).Err()
+	if err != nil {
+		log.Print(err)
+
+		outputErrorMsg(w, http.StatusInternalServerError, "user simple num sell cache update reds error")
 		return
 	}
 
