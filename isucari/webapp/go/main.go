@@ -646,7 +646,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 
 	res := resInitialize{
 		// キャンペーン実施時には還元率の設定を返す。詳しくはマニュアルを参照のこと。
-		Campaign: 1,
+		Campaign: 3,
 		// 実装言語を返す
 		Language: "Go",
 	}
@@ -1439,6 +1439,16 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		outputErrorMsg(w, http.StatusNotFound, "item not found")
 		return
 	}
+	if err != nil {
+		log.Print(err)
+
+		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+		return
+	}
+	if targetItem.Status != ItemStatusOnSale {
+		outputErrorMsg(w, http.StatusForbidden, "item is not for sale")
+		return
+	}
 
 	seller := User{}
 	err = dbx.Get(&seller, "SELECT * FROM users WHERE id = ?", targetItem.SellerID)
@@ -1446,13 +1456,6 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		outputErrorMsg(w, http.StatusNotFound, "seller not found")
 		return
 	}
-	if err != nil {
-		log.Print(err)
-
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
-	}
-
 	if err != nil {
 		log.Print(err)
 
