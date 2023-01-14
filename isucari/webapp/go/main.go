@@ -427,7 +427,7 @@ func initializeSimpleUserCache(db *sqlx.DB) error {
 
 func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
 	if us, ok := UserSimpleCache[userID]; ok {
-		numsellStr, err := redisClient.Set(context.Background(), fmt.Sprintf(UserSimpleCacheKeyFmt, userID), userSimple.NumSellItems, 0).Result()
+		numsellStr, err := redisClient.Get(context.Background(), fmt.Sprintf(UserSimpleCacheKeyFmt, userID)).Result()
 		if err != nil {
 			return us, err
 		}
