@@ -1,0 +1,9 @@
+/home/isucon/log/app/app.log {
+  missingok
+  ifempty
+  nocompress
+  copytruncate
+  rotate 10
+  su isucon isucon
+}
+EOF
