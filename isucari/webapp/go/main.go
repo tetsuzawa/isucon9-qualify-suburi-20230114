@@ -59,7 +59,7 @@ const (
 	ItemsPerPage        = 48
 	TransactionsPerPage = 10
 
-	BcryptCost = 10
+	BcryptCost = 4
 
 	UserSimpleCacheKeyFmt = "userSimple,uid:%d"
 )
@@ -575,7 +575,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = dbx.Exec(
-		"INSERT INTO configs (name, val) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET val = ?",
+		"INSERT INTO configs (name, val) VALUES (?, ?) ON CONFLICT (NAME) DO UPDATE SET val = ?",
 		"payment_service_url",
 		ri.PaymentServiceURL,
 		ri.PaymentServiceURL,
@@ -586,7 +586,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = dbx.Exec(
-		"INSERT INTO configs (name, val) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET val = ?",
+		"INSERT INTO configs (name, val) VALUES (?, ?) ON CONFLICT (NAME) DO UPDATE SET val = ?",
 		"shipment_service_url",
 		ri.ShipmentServiceURL,
 		ri.ShipmentServiceURL,
@@ -2305,8 +2305,20 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
 		return
 	}
+	hashedPassword := u.HashedPassword
+	var rehashedPassword []byte
+	var rehashed bool
+	if err := dbx.Get(&rehashedPassword, "SELECT hashed_password FROM user_password WHERE user_id = ?", u.ID); err != nil && err != sql.ErrNoRows {
+		log.Print(err)
 
-	err = bcrypt.CompareHashAndPassword(u.HashedPassword, []byte(password))
+		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+		return
+	} else if err == nil {
+		rehashed = true
+		hashedPassword = rehashedPassword
+	}
+
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err == bcrypt.ErrMismatchedHashAndPassword {
 		outputErrorMsg(w, http.StatusUnauthorized, "アカウント名かパスワードが間違えています")
 		return
@@ -2316,6 +2328,27 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 
 		outputErrorMsg(w, http.StatusInternalServerError, "crypt error")
 		return
+	}
+
+	if !rehashed {
+		rehashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), BcryptCost)
+		if err != nil {
+			log.Print(err)
+
+			outputErrorMsg(w, http.StatusInternalServerError, "error")
+			return
+		}
+		if _, err := dbx.Exec(
+			"INSERT INTO user_password (user_id, hashed_password) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET hashed_password = ?",
+			u.ID,
+			rehashedPassword,
+			rehashedPassword,
+		); err != nil {
+			log.Print(err)
+
+			outputErrorMsg(w, http.StatusInternalServerError, "db error")
+			return
+		}
 	}
 
 	session := getSession(r)
@@ -2366,6 +2399,16 @@ func postRegister(w http.ResponseWriter, r *http.Request) {
 		accountName,
 		hashedPassword,
 		address,
+	); err != nil {
+		log.Print(err)
+
+		outputErrorMsg(w, http.StatusInternalServerError, "db error")
+		return
+	}
+	if _, err := dbx.Exec(
+		"INSERT INTO user_password (user_id, hashed_password) VALUES (?, ?)",
+		userID,
+		hashedPassword,
 	); err != nil {
 		log.Print(err)
 
