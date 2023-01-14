@@ -4,6 +4,7 @@ import (
 	"context"
 	crand "crypto/rand"
 	"database/sql"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -316,6 +317,9 @@ func main() {
 		DB:       0,  // use default DB
 	})
 	defer redisClient.Close()
+
+	// セッションで構造体を使う場合に必要
+	gob.Register(User{})
 
 	mux := goji.NewMux()
 
