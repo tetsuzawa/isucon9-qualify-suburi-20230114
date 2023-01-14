@@ -2257,16 +2257,16 @@ func postBump(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = tx.Exec("UPDATE items SET created_at=?, updated_at=? WHERE id=?",
-		now,
-		now,
-		targetItem.ID,
-	)
-	if err != nil {
-		log.Print(err)
-		outputErrorMsg(w, http.StatusInternalServerError, "db error")
-		return
-	}
+	//_, err = tx.Exec("UPDATE items SET created_at=?, updated_at=? WHERE id=?",
+	//	now,
+	//	now,
+	//	targetItem.ID,
+	//)
+	//if err != nil {
+	//	log.Print(err)
+	//	outputErrorMsg(w, http.StatusInternalServerError, "db error")
+	//	return
+	//}
 
 	_, err = tx.Exec("UPDATE users SET last_bump=? WHERE id=?",
 		now,
