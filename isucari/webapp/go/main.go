@@ -10,7 +10,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -741,14 +740,6 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	if len(itemSimples) > ItemsPerPage {
 		hasNext = true
 		itemSimples = itemSimples[0:ItemsPerPage]
-	}
-
-	if len(itemSimples) > 2 {
-		left, right := itemSimples[:len(itemSimples)/2], itemSimples[len(itemSimples)/2:]
-		rand.Shuffle(len(left), func(i, j int) {
-			left[i], left[j] = left[j], left[i]
-		})
-		itemSimples = append(left, right...)
 	}
 
 	rni := resNewItems{
