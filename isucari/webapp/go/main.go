@@ -682,7 +682,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	if itemID > 0 && createdAt > 0 {
 		// paging
 		err := dbx.Select(&items,
-			"SELECT * FROM items WHERE status IN (?,?) AND (created_at < ?  OR (created_at <= ? AND id < ?)) ORDER BY status ASC, created_at DESC, id DESC LIMIT ?",
+			"SELECT * FROM items WHERE status IN (?,?) AND (created_at < ?  OR (created_at <= ? AND id < ?)) ORDER BY price DESC, status ASC, created_at DESC, id DESC LIMIT ?",
 			ItemStatusOnSale,
 			ItemStatusSoldOut,
 			time.Unix(createdAt, 0),
@@ -698,7 +698,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// 1st page
 		err := dbx.Select(&items,
-			"SELECT * FROM items WHERE status IN (?,?) ORDER BY status ASC, created_at DESC, id DESC LIMIT ?",
+			"SELECT * FROM items WHERE status IN (?,?) ORDER BY price DESC, status ASC, created_at DESC, id DESC LIMIT ?",
 			ItemStatusOnSale,
 			ItemStatusSoldOut,
 			ItemsPerPage+1,
