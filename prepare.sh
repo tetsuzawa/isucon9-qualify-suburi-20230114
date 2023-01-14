@@ -52,6 +52,9 @@ sudo cp ${mysql_error_log} ${mysql_error_log}.prev
 sudo truncate -s 0 ${mysql_error_log}
 sudo systemctl restart mysql
 
+# ====== redis ======
+sudo systemctl restart redis-server
+
 
 # slow log
 MYSQL="mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USER} -p${DB_PASS} ${DB_DATABASE}"
