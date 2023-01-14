@@ -400,17 +400,11 @@ func getUser(r *http.Request) (user User, errCode int, errMsg string) {
 	return user, http.StatusOK, ""
 }
 
-<<<<<<< HEAD
 var UserSimpleCache = map[int64]UserSimple{}
 
 func initializeSimpleUserCache(db *sqlx.DB) error {
 	var users []User
 	err := db.Select(&users, "SELECT  * FROM `users`")
-=======
-func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err error) {
-	user := User{}
-	err = sqlx.Get(q, &user, "SELECT * FROM users WHERE id = ?", userID)
->>>>>>> master
 	if err != nil {
 		return err
 	}
