@@ -682,7 +682,25 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	if itemID > 0 && createdAt > 0 {
 		// paging
 		err := dbx.Select(&items,
-			"SELECT * FROM items WHERE status IN (?,?) AND (created_at < ?  OR (created_at <= ? AND id < ?)) ORDER BY status ASC, created_at DESC, id DESC LIMIT ?",
+			`
+			SELECT * FROM items WHERE status IN (?,?) AND (created_at < ?  OR (created_at <= ? AND id < ?))
+			ORDER BY status ASC,
+			CASE
+				WHEN category_id = 22 THEN 10
+				WHEN category_id = 66 THEN 9
+				WHEN category_id = 41 THEN 8
+				WHEN category_id = 21 THEN 7
+				WHEN category_id = 31 THEN 6
+				WHEN category_id = 14 THEN 5
+				WHEN category_id = 64 THEN 4
+				WHEN category_id = 61 THEN 3
+				WHEN category_id = 32 THEN 2
+				WHEN category_id = 11 THEN 1
+				WHEN category_id = 65 THEN 0 ELSE null END,
+			created_at DESC,
+			id DESC
+			LIMIT ?
+			`,
 			ItemStatusOnSale,
 			ItemStatusSoldOut,
 			time.Unix(createdAt, 0),
@@ -698,7 +716,26 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// 1st page
 		err := dbx.Select(&items,
-			"SELECT * FROM items WHERE status IN (?,?) ORDER BY status ASC, created_at DESC, id DESC LIMIT ?",
+			`
+			SELECT * FROM items WHERE status IN (?,?)
+			ORDER BY
+			status ASC,
+			CASE
+				WHEN category_id = 22 THEN 10
+				WHEN category_id = 66 THEN 9
+				WHEN category_id = 41 THEN 8
+				WHEN category_id = 21 THEN 7
+				WHEN category_id = 31 THEN 6
+				WHEN category_id = 14 THEN 5
+				WHEN category_id = 64 THEN 4
+				WHEN category_id = 61 THEN 3
+				WHEN category_id = 32 THEN 2
+				WHEN category_id = 11 THEN 1
+				WHEN category_id = 65 THEN 0 ELSE null END,
+			created_at DESC,
+			id DESC
+			LIMIT ?
+			`,
 			ItemStatusOnSale,
 			ItemStatusSoldOut,
 			ItemsPerPage+1,
