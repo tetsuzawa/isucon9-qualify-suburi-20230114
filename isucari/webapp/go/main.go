@@ -2233,7 +2233,7 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 	hashedPassword := u.HashedPassword
 	var rehashedPassword []byte
 	var rehashed bool
-	if err := dbx.Get(&rehashedPassword, "SELECT hashed_password FROM user_password WHERE user_id = ?", u.ID); err != nil && err == sql.ErrNoRows {
+	if err := dbx.Get(&rehashedPassword, "SELECT hashed_password FROM user_password WHERE user_id = ?", u.ID); err != nil && err != sql.ErrNoRows {
 		log.Print(err)
 
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
