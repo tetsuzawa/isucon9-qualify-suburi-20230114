@@ -298,7 +298,8 @@ func main() {
 	}
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%v/%v", user, password, host, 5432, dbname)
 
-	dbx, err := sqlx.Open("pgx-replaced", dsn)
+	var err error
+	dbx, err = sqlx.Open("pgx-replaced", dsn)
 	if err != nil {
 		log.Fatalf("failed to connect to DB: %s.", err.Error())
 	}
