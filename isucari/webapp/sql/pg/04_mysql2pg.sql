@@ -5,6 +5,8 @@ TRUNCATE TABLE shippings;
 TRUNCATE TABLE transaction_evidences;
 TRUNCATE TABLE users;
 
+DELETE FROM user_password WHERE user_id > 4000;
+
 INSERT INTO categories SELECT * FROM mysql_categories;
 INSERT INTO configs SELECT * FROM mysql_configs;
 INSERT INTO items SELECT * FROM mysql_items;
