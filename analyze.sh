@@ -33,7 +33,6 @@ alp json --file=${nginx_access_log} \
   --output ${OUTFORMT} \
   --format markdown \
   --matching-groups ${ALPM}  \
-  --query-string \
   > ${result_dir}/alp.md
 
 # mysqlowquery
