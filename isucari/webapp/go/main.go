@@ -283,14 +283,6 @@ func main() {
 	if host == "" {
 		host = "127.0.0.1"
 	}
-	port := os.Getenv("MYSQL_PORT")
-	if port == "" {
-		port = "3306"
-	}
-	_, err := strconv.Atoi(port)
-	if err != nil {
-		log.Fatalf("failed to read DB port number from an environment variable MYSQL_PORT.\nError: %s", err.Error())
-	}
 	user := os.Getenv("MYSQL_USER")
 	if user == "" {
 		user = "isucari"
@@ -303,9 +295,9 @@ func main() {
 	if password == "" {
 		password = "isucari"
 	}
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%v/%v", user, password, host, port, dbname)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%v/%v", user, password, host, 5432, dbname)
 
-	dbx, err = sqlx.Open("pgx-replaced", dsn)
+	dbx, err := sqlx.Open("pgx-replaced", dsn)
 	if err != nil {
 		log.Fatalf("failed to connect to DB: %s.", err.Error())
 	}
@@ -453,7 +445,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("../sql/init.sh")
+	cmd := exec.Command("../sql/initpg.sh")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stderr
 	cmd.Run()
