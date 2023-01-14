@@ -1439,13 +1439,6 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		outputErrorMsg(w, http.StatusNotFound, "item not found")
 		return
 	}
-
-	seller := User{}
-	err = dbx.Get(&seller, "SELECT * FROM users WHERE id = ?", targetItem.SellerID)
-	if err == sql.ErrNoRows {
-		outputErrorMsg(w, http.StatusNotFound, "seller not found")
-		return
-	}
 	if err != nil {
 		log.Print(err)
 
@@ -1453,6 +1446,12 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	seller := User{}
+	err = dbx.Get(&seller, "SELECT * FROM users WHERE id = ?", targetItem.SellerID)
+	if err == sql.ErrNoRows {
+		outputErrorMsg(w, http.StatusNotFound, "seller not found")
+		return
+	}
 	if err != nil {
 		log.Print(err)
 
