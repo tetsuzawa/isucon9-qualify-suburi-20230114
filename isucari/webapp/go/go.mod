@@ -24,5 +24,6 @@ require (
 	github.com/jackc/pgtype v1.12.0 // indirect
 	github.com/jackc/pgx/v4 v4.17.1 // indirect
 	github.com/shogo82148/go-sql-proxy v0.6.1 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 )
