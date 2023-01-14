@@ -467,8 +467,8 @@ var categoryMap map[int]Category
 var categoryIDsByParentIDMap map[int][]int
 
 func initCategories() {
-	categoryMap := make(map[int]Category)
-	categoryIDsByParentIDMap := make(map[int][]int)
+	categoryMap = make(map[int]Category)
+	categoryIDsByParentIDMap = make(map[int][]int)
 	for _, c := range categories {
 		categoryMap[c.ID] = c
 		if ids, exists := categoryIDsByParentIDMap[c.ParentID]; exists {
