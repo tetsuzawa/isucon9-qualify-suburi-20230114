@@ -404,7 +404,7 @@ var UserSimpleCache = map[int64]UserSimple{}
 
 func initializeSimpleUserCache(db *sqlx.DB) error {
 	var users []User
-	err := db.Select(&users, "SELECT  * FROM `users`")
+	err := db.Select(&users, "SELECT * FROM users")
 	if err != nil {
 		return err
 	}
@@ -436,7 +436,7 @@ func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err
 		return us, err
 	} else {
 		user := User{}
-		err = sqlx.Get(q, &user, "SELECT * FROM `users` WHERE `id` = ?", userID)
+		err = sqlx.Get(q, &user, "SELECT * FROM users WHERE id = ?", userID)
 		if err != nil {
 			return userSimple, err
 		}
