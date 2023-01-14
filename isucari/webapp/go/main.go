@@ -478,19 +478,31 @@ func getConfigByName(name string) (string, error) {
 	return config.Val, err
 }
 
+var paymentServiceURL string
+
 func getPaymentServiceURL() string {
+	if paymentServiceURL != "" {
+		return paymentServiceURL
+	}
 	val, _ := getConfigByName("payment_service_url")
 	if val == "" {
 		return DefaultPaymentServiceURL
 	}
+	paymentServiceURL = val
 	return val
 }
 
+var shipmentServiceURL string
+
 func getShipmentServiceURL() string {
+	if shipmentServiceURL != "" {
+		return shipmentServiceURL
+	}
 	val, _ := getConfigByName("shipment_service_url")
 	if val == "" {
 		return DefaultShipmentServiceURL
 	}
+	shipmentServiceURL = val
 	return val
 }
 
