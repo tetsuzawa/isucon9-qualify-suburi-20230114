@@ -2264,7 +2264,7 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if _, err := dbx.Exec(
-			"INSERT INTO user_password (user_id, hashed_password) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET val = ?",
+			"INSERT INTO user_password (user_id, hashed_password) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET hashed_password = ?",
 			u.ID,
 			rehashedPassword,
 			rehashedPassword,
