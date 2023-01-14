@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -2233,12 +2234,12 @@ func postLogin(w http.ResponseWriter, r *http.Request) {
 	hashedPassword := u.HashedPassword
 	var rehashedPassword []byte
 	var rehashed bool
-	if err := dbx.Get(&rehashedPassword, "SELECT hashed_password FROM user_password WHERE user_id = ?", u.ID); err != nil {
+	if err := dbx.Get(&rehashedPassword, "SELECT hashed_password FROM user_password WHERE user_id = ?", u.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		log.Print(err)
 
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
 		return
-	} else {
+	} else if err == nil {
 		rehashed = true
 		hashedPassword = rehashedPassword
 	}
