@@ -1445,6 +1445,10 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		outputErrorMsg(w, http.StatusInternalServerError, "db error")
 		return
 	}
+	if targetItem.Status != ItemStatusOnSale {
+		outputErrorMsg(w, http.StatusForbidden, "item is not for sale")
+		return
+	}
 
 	seller := User{}
 	err = dbx.Get(&seller, "SELECT * FROM users WHERE id = ?", targetItem.SellerID)
